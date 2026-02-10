@@ -16,7 +16,7 @@ import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
-  const { userId, isSignedIn } = useAuth();
+  const { isSignedIn } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [sport, setSport] = useState<string>("Cricket");
