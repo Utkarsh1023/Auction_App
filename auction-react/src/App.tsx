@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/clerk-react";
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from './firebase';
 import "./App.css";
 import AddPlayer from "./components/AddPlayer";
 import AddTeam from "./components/AddTeam";
@@ -15,43 +17,51 @@ import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
-  const [players, setPlayers] = useState<Player[]>(() =>
-    (JSON.parse(localStorage.getItem("players") || "[]") as Player[]).map(p => ({
-      ...p,
-      basePrice: p.basePrice || 0
-    }))
-  );
+  const { userId } = useAuth();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [sport, setSport] = useState<string>("Cricket");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [teams, setTeams] = useState<Team[]>(() =>
-    JSON.parse(localStorage.getItem("teams") || "[]") as Team[]
-  );
-
-
-
-  const [sport, setSport] = useState<string>(() =>
-    localStorage.getItem("sport") || "Cricket"
-  );
-
-  const [history, setHistory] = useState<HistoryEntry[]>(() =>
-    JSON.parse(localStorage.getItem("history") || "[]") as HistoryEntry[]
-  );
-
-  /* ================= AUTO SAVE ================= */
+  // Load data from Firestore on user login
   useEffect(() => {
-    localStorage.setItem("players", JSON.stringify(players));
-  }, [players]);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem("teams", JSON.stringify(teams));
-  }, [teams]);
+    (async () => {
+      try {
+        const docRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setPlayers((data.players || []).map((p: any) => ({ ...p, basePrice: p.basePrice || 0 })));
+          setTeams(data.teams || []);
+          setSport(data.sport || "Cricket");
+          setHistory(data.history || []);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
 
+  // Save data to Firestore on changes
   useEffect(() => {
-    localStorage.setItem("sport", sport);
-  }, [sport]);
-
-  useEffect(() => {
-    localStorage.setItem("history", JSON.stringify(history));
-  }, [history]);
+    if (!userId || loading) return;
+    const saveData = async () => {
+      try {
+        await setDoc(doc(db, 'users', userId), { players, teams, sport, history }, { merge: true });
+      } catch (error) {
+        console.error("Error saving data:", error);
+      }
+    };
+    saveData();
+  }, [players, teams, sport, history, userId, loading]);
 
   /* ================= BUY PLAYER ================= */
   const buyPlayer = (playerIndex: number, teamIndex: number, bid: number) => {
@@ -148,14 +158,19 @@ export default function App() {
   };
 
   /* ================= CLEAR ================= */
-  const clearAllData = () => {
+  const clearAllData = async () => {
     if (!window.confirm("⚠️ This will delete auction data (players, teams). History will be preserved. Continue?")) return;
 
     setPlayers([]);
     setTeams([]);
-    localStorage.removeItem("players");
-    localStorage.removeItem("teams");
     // Preserve sport, history
+    if (userId) {
+      try {
+        await setDoc(doc(db, 'users', userId), { players: [], teams: [], sport, history }, { merge: true });
+      } catch (error) {
+        console.error("Error clearing data:", error);
+      }
+    }
   };
 
 
@@ -251,6 +266,10 @@ export default function App() {
   };
 
   /* ================= UI ================= */
+  if (loading) {
+    return <div className="App">Loading...</div>;
+  }
+
   return (
     <div className="App">
       <SignedOut>
