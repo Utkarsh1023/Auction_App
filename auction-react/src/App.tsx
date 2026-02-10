@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
 import "./App.css";
-import AddPlayer from "./components/AddPlayer.tsx";
-import AddTeam from "./components/AddTeam.tsx";
-import PlayerList from "./components/PlayerList.tsx";
-import TeamList from "./components/TeamList.tsx";
-import AddPlayerExcel from "./components/AddPlayerExcel.tsx";
+import AddPlayer from "./components/AddPlayer";
+import AddTeam from "./components/AddTeam";
+import PlayerList from "./components/PlayerList";
+import TeamList from "./components/TeamList";
+import AddPlayerExcel from "./components/AddPlayerExcel";
 import AddTeamExcel from "./components/AddTeamExcel";
 import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
@@ -25,17 +26,7 @@ export default function App() {
     JSON.parse(localStorage.getItem("teams") || "[]") as Team[]
   );
 
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() =>
-    JSON.parse(localStorage.getItem("isLoggedIn") || "false") as boolean
-  );
 
-  const [currentUser, setCurrentUser] = useState<string>(() =>
-    localStorage.getItem("currentUser") || ""
-  );
-
-  const [users, setUsers] = useState<Record<string, string>>(() =>
-    JSON.parse(localStorage.getItem("users") || "{}") as Record<string, string>
-  );
 
   const [sport, setSport] = useState<string>(() =>
     localStorage.getItem("sport") || "Cricket"
@@ -53,18 +44,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("teams", JSON.stringify(teams));
   }, [teams]);
-
-  useEffect(() => {
-    localStorage.setItem("isLoggedIn", JSON.stringify(isLoggedIn));
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    localStorage.setItem("currentUser", currentUser);
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
 
   useEffect(() => {
     localStorage.setItem("sport", sport);
@@ -183,29 +162,7 @@ export default function App() {
     // Preserve users, sport, history
   };
 
-  /* ================= AUTH ================= */
-  const handleLogin = (username: string, password: string) => {
-    if (users[username] && users[username] === password) {
-      setIsLoggedIn(true);
-      setCurrentUser(username);
-    } else {
-      alert("Invalid credentials");
-    }
-  };
 
-  const handleRegister = (username: string, password: string) => {
-    if (users[username]) {
-      alert("Username already exists");
-      return;
-    }
-    setUsers(prev => ({ ...prev, [username]: password }));
-    alert("Registration successful! Please login.");
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser("");
-  };
 
   /* ================= AUCTION COMPLETION ================= */
   const isAuctionCompleted = players.every(p => p.sold);
@@ -298,32 +255,31 @@ export default function App() {
   };
 
   /* ================= UI ================= */
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} onRegister={handleRegister} />;
-  }
-
   return (
     <div className="App">
-      <header>
-        <h1> Player Bidding & Squad Builder</h1>
-        <p>Manage live bids, track team purses, and build a powerful squad in rela time.</p>
-        <p>Every Bid counts - strategy decides the champion.</p>
-        <div style={{ marginBottom: "20px" }}>
-          <label>Sport: </label>
-          <select value={sport} onChange={(e) => setSport(e.target.value)}>
-            <option value="Cricket">Cricket</option>
-            <option value="Football">Football</option>
-            <option value="Basketball">Basketball</option>
-            <option value="Volleyball">Volleyball</option>
-            <option value="Badminton">Badminton</option>
-            <option value="Table Tennis">Table Tennis</option>
-            <option value="E-Sports">E-Sports</option>
-            <option value="Kabbadi">Kabbadi</option>
-            <option value="Chess">Chess</option>
-          </select>
-        </div>
-        <p>Logged in as: {currentUser} <button onClick={handleLogout}>Logout</button></p>
-      </header>
+      <SignedOut>
+        <Login />
+      </SignedOut>
+      <SignedIn>
+        <header>
+          <h1> Player Bidding & Squad Builder</h1>
+          <p>Manage live bids, track team purses, and build a powerful squad in rela time.</p>
+          <p>Every Bid counts - strategy decides the champion.</p>
+          <div style={{ marginBottom: "20px" }}>
+            <label>Sport: </label>
+            <select value={sport} onChange={(e) => setSport(e.target.value)}>
+              <option value="Cricket">Cricket</option>
+              <option value="Football">Football</option>
+              <option value="Basketball">Basketball</option>
+              <option value="Volleyball">Volleyball</option>
+              <option value="Badminton">Badminton</option>
+              <option value="Table Tennis">Table Tennis</option>
+              <option value="E-Sports">E-Sports</option>
+              <option value="Kabbadi">Kabbadi</option>
+              <option value="Chess">Chess</option>
+            </select>
+          </div>
+        </header>
 
       <main>
         <section>
@@ -384,6 +340,7 @@ export default function App() {
           </section>
         </>
       </main>
+      </SignedIn>
     </div>
   );
 }
