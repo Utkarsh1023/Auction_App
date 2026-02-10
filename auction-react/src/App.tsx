@@ -11,7 +11,6 @@ import AddPlayerExcel from "./components/AddPlayerExcel";
 import AddTeamExcel from "./components/AddTeamExcel";
 import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
-import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
