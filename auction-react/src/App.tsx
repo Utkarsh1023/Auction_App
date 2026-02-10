@@ -1,47 +1,48 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import AddPlayer from "./components/AddPlayer";
-import AddTeam from "./components/AddTeam";
-import PlayerList from "./components/PlayerList";
-import TeamList from "./components/TeamList";
-import AddPlayerExcel from "./components/AddPlayerExcel";
+import AddPlayer from "./components/AddPlayer.tsx";
+import AddTeam from "./components/AddTeam.tsx";
+import PlayerList from "./components/PlayerList.tsx";
+import TeamList from "./components/TeamList.tsx";
+import AddPlayerExcel from "./components/AddPlayerExcel.tsx";
 import AddTeamExcel from "./components/AddTeamExcel";
 import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from "xlsx";
+import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
-  const [players, setPlayers] = useState(() =>
-    (JSON.parse(localStorage.getItem("players")) || []).map(p => ({
+  const [players, setPlayers] = useState<Player[]>(() =>
+    (JSON.parse(localStorage.getItem("players") || "[]") as Player[]).map(p => ({
       ...p,
       basePrice: p.basePrice || 0
     }))
   );
 
-  const [teams, setTeams] = useState(() =>
-    (JSON.parse(localStorage.getItem("teams")) || [])
+  const [teams, setTeams] = useState<Team[]>(() =>
+    JSON.parse(localStorage.getItem("teams") || "[]") as Team[]
   );
 
-  const [isLoggedIn, setIsLoggedIn] = useState(() =>
-    JSON.parse(localStorage.getItem("isLoggedIn")) || false
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() =>
+    JSON.parse(localStorage.getItem("isLoggedIn") || "false") as boolean
   );
 
-  const [currentUser, setCurrentUser] = useState(() =>
+  const [currentUser, setCurrentUser] = useState<string>(() =>
     localStorage.getItem("currentUser") || ""
   );
 
-  const [users, setUsers] = useState(() =>
-    JSON.parse(localStorage.getItem("users")) || {}
+  const [users, setUsers] = useState<Record<string, string>>(() =>
+    JSON.parse(localStorage.getItem("users") || "{}") as Record<string, string>
   );
 
-  const [sport, setSport] = useState(() =>
+  const [sport, setSport] = useState<string>(() =>
     localStorage.getItem("sport") || "Cricket"
   );
 
-  const [history, setHistory] = useState(() =>
-    JSON.parse(localStorage.getItem("history")) || []
+  const [history, setHistory] = useState<HistoryEntry[]>(() =>
+    JSON.parse(localStorage.getItem("history") || "[]") as HistoryEntry[]
   );
 
   /* ================= AUTO SAVE ================= */
@@ -74,7 +75,7 @@ export default function App() {
   }, [history]);
 
   /* ================= BUY PLAYER ================= */
-  const buyPlayer = (playerIndex, teamIndex, bid) => {
+  const buyPlayer = (playerIndex: number, teamIndex: number, bid: number) => {
     const team = teams[teamIndex];
     const player = players[playerIndex];
 
@@ -125,13 +126,13 @@ export default function App() {
         startY
       );
 
-      doc.autoTable({
+      const result = doc.autoTable({
         startY: startY + 5,
         head: [["Player", "Year", "Bid"]],
-        body: team.squad.map(p => [p.name, p.year, `${p.bid} Cr`])
+        body: team.squad.map((p: { name: string; year: string; bid: number }) => [p.name, p.year, `${p.bid} Cr`])
       });
 
-      startY = doc.lastAutoTable.finalY + 10;
+      startY = result.finalY + 10;
     });
 
     doc.save("auction-result.pdf");
@@ -183,7 +184,7 @@ export default function App() {
   };
 
   /* ================= AUTH ================= */
-  const handleLogin = (username, password) => {
+  const handleLogin = (username: string, password: string) => {
     if (users[username] && users[username] === password) {
       setIsLoggedIn(true);
       setCurrentUser(username);
@@ -192,7 +193,7 @@ export default function App() {
     }
   };
 
-  const handleRegister = (username, password) => {
+  const handleRegister = (username: string, password: string) => {
     if (users[username]) {
       alert("Username already exists");
       return;
@@ -209,15 +210,79 @@ export default function App() {
   /* ================= AUCTION COMPLETION ================= */
   const isAuctionCompleted = players.every(p => p.sold);
 
+  const exportHistoryToExcel = () => {
+    if (history.length === 0) {
+      alert("No history to export.");
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // Summary sheet
+    const summaryData = history.map((entry, index) => ({
+      "Index": index + 1,
+      "Sport": entry.sport,
+      "Date": new Date(entry.date).toLocaleDateString(),
+      "Players Count": entry.playersCount,
+      "Teams Count": entry.teamsCount
+    }));
+    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "History Summary");
+
+    // Detailed sheets for each auction
+    history.forEach((entry, index) => {
+      const auctionData = JSON.parse(entry.auctionData);
+      const playersData = auctionData.players.map((p: Player) => ({
+        Name: p.name,
+        "Registration No": p.reg,
+        Year: p.year,
+        "Base Price": p.basePrice,
+        Status: p.sold ? "Sold" : "Unsold"
+      }));
+      const teamsData = auctionData.teams.map((t: Team) => ({
+        Name: t.name,
+        Captain: t.captain,
+        "Remaining Purse": t.purse,
+        "Squad Size": t.squad.length
+      }));
+
+      const playersSheet = XLSX.utils.json_to_sheet(playersData);
+      const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
+
+      XLSX.utils.book_append_sheet(workbook, playersSheet, `Auction ${index + 1} - Players`);
+      XLSX.utils.book_append_sheet(workbook, teamsSheet, `Auction ${index + 1} - Teams`);
+    });
+
+    XLSX.writeFile(workbook, "auction-history.xlsx");
+  };
+
   const saveAuctionData = () => {
-    const data = { players, teams };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'auction-data.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Prepare data for Excel
+    const playersData = players.map(p => ({
+      Name: p.name,
+      "Registration No": p.reg,
+      Year: p.year,
+      "Base Price": p.basePrice,
+      Status: p.sold ? "Sold" : "Unsold"
+    }));
+
+    const teamsData = teams.map(t => ({
+      Name: t.name,
+      Captain: t.captain,
+      "Remaining Purse": t.purse,
+      "Squad Size": t.squad.length
+    }));
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    const playersSheet = XLSX.utils.json_to_sheet(playersData);
+    const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
+
+    XLSX.utils.book_append_sheet(workbook, playersSheet, "Players");
+    XLSX.utils.book_append_sheet(workbook, teamsSheet, "Teams");
+
+    // Download Excel file
+    XLSX.writeFile(workbook, "auction-data.xlsx");
 
     // Save to history
     const historyEntry = {
@@ -227,7 +292,7 @@ export default function App() {
       teamsCount: teams.length,
       players: [...players],
       teams: [...teams],
-      auctionData: JSON.stringify(data)
+      auctionData: JSON.stringify({ players, teams }) // Keep JSON for history storage
     };
     setHistory(prev => [...prev, historyEntry]);
   };
@@ -249,8 +314,12 @@ export default function App() {
             <option value="Cricket">Cricket</option>
             <option value="Football">Football</option>
             <option value="Basketball">Basketball</option>
-            <option value="Baseball">Baseball</option>
-            <option value="Soccer">Soccer</option>
+            <option value="Volleyball">Volleyball</option>
+            <option value="Badminton">Badminton</option>
+            <option value="Table Tennis">Table Tennis</option>
+            <option value="E-Sports">E-Sports</option>
+            <option value="Kabbadi">Kabbadi</option>
+            <option value="Chess">Chess</option>
           </select>
         </div>
         <p>Logged in as: {currentUser} <button onClick={handleLogout}>Logout</button></p>
@@ -282,7 +351,7 @@ export default function App() {
         </section>
 
         <section>
-          <AuctionHistory history={history} setHistory={setHistory} />
+          <AuctionHistory history={history} setHistory={setHistory} exportHistoryToExcel={exportHistoryToExcel} />
         </section>
 
         <>
@@ -292,7 +361,7 @@ export default function App() {
                 <h2>🏆 Auction Completed!</h2>
                 <p>All players have been sold.</p>
                 <button onClick={saveAuctionData} style={{ marginTop: "20px" }}>
-                  💾 Save Auction Data (JSON)
+                  💾 Save Auction Data (Excel)
                 </button>
               </div>
             </section>
@@ -301,7 +370,7 @@ export default function App() {
           <section>
             <div className="export-buttons">
               <button onClick={downloadPDF}>
-                📄 Download Auction Results (PDF)
+                📄 Download Auction Results
               </button>
 
               <button onClick={exportPlayersExcel}>

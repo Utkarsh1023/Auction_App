@@ -1,14 +1,27 @@
 import { useState } from "react";
+import type { Player, Team } from "../types";
 
-export default function PlayerList({ players, teams, buyPlayer }) {
-  const [bids, setBids] = useState({});
-  const [selectedTeams, setSelectedTeams] = useState({});
-  const [searchTerm, setSearchTerm] = useState("");
+interface FilteredPlayer extends Player {
+  originalIndex: number;
+}
 
-  const filteredPlayers = players.map((p, index) => ({ ...p, originalIndex: index })).filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.reg.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+interface PlayerListProps {
+  players: Player[];
+  teams: Team[];
+  buyPlayer: (playerIndex: number, teamIndex: number, bid: number) => void;
+}
+
+export default function PlayerList({ players, teams, buyPlayer }: PlayerListProps) {
+  const [bids, setBids] = useState<{ [key: number]: number }>({});
+  const [selectedTeams, setSelectedTeams] = useState<{ [key: number]: string }>({});
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const filteredPlayers: FilteredPlayer[] = players
+    .map((p, index) => ({ ...p, originalIndex: index }))
+    .filter(p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.reg.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   return (
     <div>
@@ -17,7 +30,7 @@ export default function PlayerList({ players, teams, buyPlayer }) {
         type="text"
         placeholder="Search by name or registration number"
         value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
         style={{ marginBottom: "20px", padding: "10px", width: "100%" }}
       />
       <div className="grid">
@@ -32,7 +45,7 @@ export default function PlayerList({ players, teams, buyPlayer }) {
                 type="number"
                 placeholder="Bid"
                 value={bids[p.originalIndex] || ""}
-                onChange={e =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setBids({ ...bids, [p.originalIndex]: Number(e.target.value) })
                 }
                 style={{ marginBottom: "20px", padding: "10px", width: "100%" }}
@@ -40,17 +53,16 @@ export default function PlayerList({ players, teams, buyPlayer }) {
 
               <select
                 value={selectedTeams[p.originalIndex] ?? ""}
-                onChange={e =>
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   setSelectedTeams({ ...selectedTeams, [p.originalIndex]: e.target.value })
                 }
               >
                 <option value="">Select Team</option>
                 {teams.map((t, idx) => (
-                  <option value={idx} key={idx}>
+                  <option value={idx.toString()} key={idx}>
                     {t.name}
                   </option>
                 ))}
-                
               </select>
 
               <button

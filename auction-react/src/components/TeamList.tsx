@@ -1,4 +1,10 @@
-export default function TeamList({ teams }) {
+import type { Team } from "../types";
+
+interface TeamListProps {
+  teams: Team[];
+}
+
+export default function TeamList({ teams }: TeamListProps) {
   return (
     <div>
       <h2>Teams</h2>
@@ -8,7 +14,7 @@ export default function TeamList({ teams }) {
             <div className="team-header">
               <div>
                 <h3>{t.name}</h3>
-                <p><b>Captain:</b> {t.captain}</p>
+                <p><b>Captain Name:</b> {t.captain}</p>
                 <p>Remaining Purse: {t.purse} Cr</p>
               </div>
             </div>

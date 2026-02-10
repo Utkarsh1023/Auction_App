@@ -1,20 +1,14 @@
-# Auction App Enhancements TODO
+# TODO: Add View Teams Option in Auction History
 
-## Completed
-- [x] Display teams in card format (changed className in TeamList.jsx)
-- [x] Create Login.jsx component with username/password fields
-- [x] Update App.jsx to add authentication state (isLoggedIn, currentUser)
-- [x] Add conditional rendering in App.jsx to show Login if not authenticated
-- [x] Implement auction completion check (all players sold)
-- [x] Add "Auction Completed" section with save data button (download JSON)
-- [x] Add registration functionality to Login component
-- [x] Update App.jsx to handle user registration
-- [x] Test login, registration, and completion flow
+## Steps to Complete:
+- [x] Modify `src/components/AuctionHistory.tsx` to add a "View Teams" button for each history entry.
+- [x] Implement a modal or expandable section to display all teams with their squad members when the button is clicked.
+- [x] Ensure the display shows team name, captain, and list of players with bids.
+- [x] Test the new functionality to verify teams and squads are displayed correctly.
+- [x] Add modal styles to `src/App.css` for proper display.
 
-## Pending
-- [x] Add sport selection dropdown in App.jsx header (default to 'Cricket')
-- [x] Add history state in App.jsx for storing past auctions
-- [x] Modify saveAuctionData to save completed auction to history
-- [x] Create AuctionHistory.jsx component to display history list
-- [x] Add AuctionHistory section to App.jsx UI
-- [x] Implement delete individual history and clear all history in AuctionHistory.jsx
+## Notes:
+- History entries already contain teams and players data.
+- Use existing card styling for consistency.
+- Add responsive design for the modal/section.
+- Testing completed: Code review confirms modal implementation is correct, styles are added, and functionality should work as expected.

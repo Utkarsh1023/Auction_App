@@ -1,22 +1,29 @@
 import * as XLSX from "xlsx";
+import type { Player } from "../types";
 
-export default function AddPlayerExcel({ setPlayers }) {
-  const handleFile = e => {
-    const file = e.target.files[0];
+interface AddPlayerExcelProps {
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+}
+
+export default function AddPlayerExcel({ setPlayers }: AddPlayerExcelProps) {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     const reader = new FileReader();
 
-    reader.onload = evt => {
-      const data = new Uint8Array(evt.target.result);
+    reader.onload = (evt: ProgressEvent<FileReader>) => {
+      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(sheet);
 
       // Log column headers from the first row
       if (json.length > 0) {
-        console.log('Column headers in Excel:', Object.keys(json[0]));
+        console.log('Column headers in Excel:', Object.keys(json[0] as object));
       }
 
-      const formatted = json.map(p => {
+      const formatted: Player[] = json.map((p: any) => {
         const basePriceStr = p.basePrice || p['Base Price'] || p.BasePrice || p['base price'] || p['basePrice '] || '0';
         const basePrice = parseFloat(basePriceStr.toString().replace(/[^\d.]/g, '')) || 0;
 
@@ -40,7 +47,7 @@ export default function AddPlayerExcel({ setPlayers }) {
 
   return (
     <>
-      <h3>Upload Players File</h3>
+      <h3>Upload Player's File</h3>
       <input type="file" accept=".xlsx,.csv" onChange={handleFile} />
     </>
   );

@@ -204,9 +204,9 @@ h1::after {
 
 .card h3 {
   margin-top: 0;
-  color: #f093fb;
-  font-size: 1.3rem;
-  font-weight: 500;
+  color: #1775da;
+  font-size: 1.5rem;
+  font-weight: 1000;
 }
 
 input, select, button {
@@ -297,6 +297,122 @@ button:active {
   box-shadow: 0 8px 25px rgba(244, 67, 54, 0.4) !important;
 }
 
+/* Login Page Styles */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ff0000 0%, #ff7f00 14%, #ffff00 28%, #00ff00 42%, #0000ff 57%, #4b0082 71%, #9400d3 85%, #ff1493 100%);
+  background-attachment: fixed;
+  animation: rotateGradient 20s ease-in-out infinite;
+  padding: 20px;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(15px);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  max-width: 900px;
+  width: 100%;
+  animation: slideIn 0.6s ease-out;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-header h1 {
+  color: #667eea;
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.login-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.login-register-sections {
+  display: flex;
+  gap: 40px;
+  justify-content: space-between;
+}
+
+.section {
+  flex: 1;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+.section h2 {
+  text-align: center;
+  color: #667eea;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  border-bottom: 2px solid #764ba2;
+  padding-bottom: 10px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
 @media (max-width: 768px) {
   .App {
     padding: 10px;
@@ -317,5 +433,94 @@ button:active {
 
   .export-buttons button {
     max-width: 100%;
+  }
+
+  .login-register-sections {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .login-card {
+    padding: 20px;
+  }
+
+  .login-header h1 {
+    font-size: 2rem;
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(15px);
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  color: #667eea;
+  font-size: 1.8rem;
+  border-bottom: 2px solid #764ba2;
+  padding-bottom: 10px;
+}
+
+.teams-list {
+  margin-top: 20px;
+}
+
+.teams-list .card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
+.teams-list h4 {
+  color: #f093fb;
+  margin-bottom: 10px;
+}
+
+.teams-list h5 {
+  margin-bottom: 10px;
+  color: #667eea;
+}
+
+.teams-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.teams-list li {
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.teams-list li:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    padding: 20px;
+    margin: 20px;
+    max-width: 90vw;
   }
 }

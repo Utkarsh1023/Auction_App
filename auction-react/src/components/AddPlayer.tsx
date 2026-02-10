@@ -1,13 +1,20 @@
-export default function AddPlayer({ setPlayers, players }) {
-  const addPlayer = e => {
-    e.preventDefault();
-    const f = e.target;
+import type { Player } from "../types";
 
-    const newPlayer = {
-      name: f.name.value.trim(),
-      reg: f.reg.value.trim(),
-      year: f.year.value.trim(),
-      basePrice: Number(f.base.value),
+interface AddPlayerProps {
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  players: Player[];
+}
+
+export default function AddPlayer({ setPlayers, players }: AddPlayerProps) {
+  const addPlayer = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = e.currentTarget;
+
+    const newPlayer: Player = {
+      name: (f.elements.namedItem('name') as HTMLInputElement).value.trim(),
+      reg: (f.elements.namedItem('reg') as HTMLInputElement).value.trim(),
+      year: (f.elements.namedItem('year') as HTMLInputElement).value.trim(),
+      basePrice: Number((f.elements.namedItem('base') as HTMLInputElement).value),
       sold: false
     };
 
