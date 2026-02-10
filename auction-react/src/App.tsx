@@ -126,10 +126,10 @@ export default function App() {
         startY
       );
 
-      const result = doc.autoTable({
+      const result = (doc as any).autoTable({
         startY: startY + 5,
         head: [["Player", "Year", "Bid"]],
-        body: team.squad.map((p: { name: string; year: string; bid: number }) => [p.name, p.year, `${p.bid} Cr`])
+        body: team.squad.map(p => [p.name, p.year, `${p.bid} Cr`])
       });
 
       startY = result.finalY + 10;
