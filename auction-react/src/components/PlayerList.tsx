@@ -35,60 +35,71 @@ export default function PlayerList({ players, teams, buyPlayer, removePlayer }: 
         style={{ marginBottom: "20px", padding: "10px", width: "100%" }}
       />
       <div className="grid">
-        {filteredPlayers.map((p) =>
-          !p.sold && (
-            <div className="card" key={p.originalIndex}>
+        {filteredPlayers.map((p) => (
+            <div
+              className="card"
+              key={p.originalIndex}
+            >
               <b>Player Name: {p.name}</b>
               <p>Reg. No.: {p.reg} | Year: {p.year}</p>
               <p>Base Price: {p.basePrice} Cr</p>
 
-              <input
-                type="number"
-                placeholder="Bid"
-                value={bids[p.originalIndex] || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setBids({ ...bids, [p.originalIndex]: Number(e.target.value) })
-                }
-                style={{ marginBottom: "20px", padding: "10px", width: "100%" }}
-              />
-
-              <select
-                value={selectedTeams[p.originalIndex] ?? ""}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setSelectedTeams({ ...selectedTeams, [p.originalIndex]: e.target.value })
-                }
-              >
-                <option value="">Select Team</option>
-                {teams.map((t, idx) => (
-                  <option value={idx.toString()} key={idx}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                <button
-                  onClick={() => {
-                    if (!bids[p.originalIndex] || selectedTeams[p.originalIndex] === "") {
-                      alert("Enter bid & select team");
-                      return;
+              {p.sold ? (
+                (() => {
+                  const team = teams.find(t => t.squad.some(s => s.name === p.name && s.year === p.year));
+                  return <p style={{ color: "green", fontWeight: "bold" }}>Sold to {team ? team.name : 'Unknown'}</p>;
+                })()
+              ) : (
+                <>
+                  <input
+                    type="number"
+                    placeholder="Bid"
+                    value={bids[p.originalIndex] || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setBids({ ...bids, [p.originalIndex]: Number(e.target.value) })
                     }
-                    buyPlayer(p.originalIndex, Number(selectedTeams[p.originalIndex]), bids[p.originalIndex]);
-                  }}
-                >
-                  Sold
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to remove this player?")) {
-                      removePlayer(p.originalIndex);
+                    style={{ marginBottom: "20px", padding: "10px", width: "100%" }}
+                  />
+
+                  <select
+                    value={selectedTeams[p.originalIndex] ?? ""}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setSelectedTeams({ ...selectedTeams, [p.originalIndex]: e.target.value })
                     }
-                  }}
-                  style={{ backgroundColor: "#dc3545", color: "white" }}
-                >
-                  Remove
-                </button>
-              </div>
+                  >
+                    <option value="">Select Team</option>
+                    {teams.map((t, idx) => (
+                      <option value={idx.toString()} key={idx}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                    <button
+                      onClick={() => {
+                        if (!bids[p.originalIndex] || selectedTeams[p.originalIndex] === "") {
+                          alert("Enter bid & select team");
+                          return;
+                        }
+                        buyPlayer(p.originalIndex, Number(selectedTeams[p.originalIndex]), bids[p.originalIndex]);
+                      }}
+                    >
+                      Sold
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to remove this player?")) {
+                          removePlayer(p.originalIndex);
+                        }
+                      }}
+                      style={{ backgroundColor: "#dc3545", color: "white" }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )
         )}

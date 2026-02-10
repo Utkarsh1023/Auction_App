@@ -23,16 +23,16 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load user-specific data from Firestore on login
+  // Load shared data from Firestore on login
   useEffect(() => {
-    if (!isSignedIn || !userId) {
+    if (!isSignedIn) {
       setLoading(false);
       return;
     }
 
     (async () => {
       try {
-        const docRef = doc(db, 'users', userId);
+        const docRef = doc(db, 'shared', 'auctionData');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -47,20 +47,20 @@ export default function App() {
         setLoading(false);
       }
     })();
-  }, [isSignedIn, userId]);
+  }, [isSignedIn]);
 
   // Save data to Firestore on changes
   useEffect(() => {
-    if (!isSignedIn || loading || !userId) return;
+    if (!isSignedIn || loading) return;
     const saveData = async () => {
       try {
-        await setDoc(doc(db, 'users', userId), { players, teams, sport, history }, { merge: true });
+        await setDoc(doc(db, 'shared', 'auctionData'), { players, teams, sport, history }, { merge: true });
       } catch (error) {
         console.error("Error saving data:", error);
       }
     };
     saveData();
-  }, [players, teams, sport, history, isSignedIn, loading, userId]);
+  }, [players, teams, sport, history, isSignedIn, loading]);
 
   /* ================= REMOVE PLAYER ================= */
   const removePlayer = (playerIndex: number) => {
