@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import AddPlayer from "./components/AddPlayer";
-import AddTeam from "./components/Addteam";
+import AddTeam from "./components/AddTeam";
 import PlayerList from "./components/PlayerList";
 import TeamList from "./components/TeamList";
 import AddPlayerExcel from "./components/AddPlayerExcel";
