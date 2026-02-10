@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 import "./App.css";
 import AddPlayer from "./components/AddPlayer";
 import AddTeam from "./components/AddTeam";
@@ -149,17 +149,13 @@ export default function App() {
 
   /* ================= CLEAR ================= */
   const clearAllData = () => {
-    if (!window.confirm("⚠️ This will delete auction data (players, teams). Registered users and history will be preserved. Continue?")) return;
+    if (!window.confirm("⚠️ This will delete auction data (players, teams). History will be preserved. Continue?")) return;
 
     setPlayers([]);
     setTeams([]);
-    setIsLoggedIn(false);
-    setCurrentUser("");
     localStorage.removeItem("players");
     localStorage.removeItem("teams");
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("currentUser");
-    // Preserve users, sport, history
+    // Preserve sport, history
   };
 
 
@@ -263,7 +259,7 @@ export default function App() {
       <SignedIn>
         <header>
           <h1> Player Bidding & Squad Builder</h1>
-          <p>Manage live bids, track team purses, and build a powerful squad in rela time.</p>
+          <p>Manage live bids, track team purses, and build a powerful squad in real time.</p>
           <p>Every Bid counts - strategy decides the champion.</p>
           <div style={{ marginBottom: "20px" }}>
             <label>Sport: </label>
@@ -279,9 +275,12 @@ export default function App() {
               <option value="Chess">Chess</option>
             </select>
           </div>
+          <div style={{ marginBottom: "20px", textAlign: "center" }}>
+            <UserButton />
+          </div>
         </header>
 
-      <main>
+        <main>
         <section>
           <h2>Add Player & Team Captain or Upload File</h2>
           <div className="grid">
