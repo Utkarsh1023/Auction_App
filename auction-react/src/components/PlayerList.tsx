@@ -47,7 +47,13 @@ export default function PlayerList({ players, teams, buyPlayer, removePlayer }: 
               {p.sold ? (
                 (() => {
                   const team = teams.find(t => t.squad.some(s => s.name === p.name && s.year === p.year));
-                  return <p style={{ color: "green", fontWeight: "bold" }}>Sold to {team ? team.name : 'Unknown'}</p>;
+                  if (team) {
+                    const squadMember = team.squad.find(s => s.name === p.name && s.year === p.year);
+                    const amount = squadMember ? squadMember.bid : 0;
+                    return <p style={{ color: "green", fontWeight: "bold" }}>Sold to {team.name} for {amount} Cr</p>;
+                  } else {
+                    return <p style={{ color: "green", fontWeight: "bold" }}>Sold to Unknown</p>;
+                  }
                 })()
               ) : (
                 <>
