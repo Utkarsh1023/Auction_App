@@ -112,31 +112,7 @@ export default function App() {
   };
 
   /* ================= PDF ================= */
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.text("🏏 Auction Result", 14, 10);
-
-    let startY = 20;
-
-    teams.forEach(team => {
-      doc.text(
-        `${team.name} (Captain: ${team.captain})`,
-        14,
-        startY
-      );
-
-      const result = (doc as any).autoTable({
-        startY: startY + 5,
-        head: [["Player", "Year", "Bid"]],
-        body: team.squad.map(p => [p.name, p.year, `${p.bid} Cr`])
-      });
-
-      startY = result.finalY + 10;
-    });
-
-    doc.save("auction-result.pdf");
-  };
-
+  
   /* ================= EXCEL ================= */
   const exportPlayersExcel = () => {
     const data = players.map(p => {
@@ -182,8 +158,6 @@ export default function App() {
       }
     }
   };
-
-
 
   /* ================= AUCTION COMPLETION ================= */
   const isAuctionCompleted = players.every(p => p.sold);
@@ -353,10 +327,6 @@ export default function App() {
 
         <section>
           <div className="export-buttons">
-            <button onClick={downloadPDF}>
-              📄 Download Auction Results
-            </button>
-
             <button onClick={exportPlayersExcel}>
               📊 Export Players to Excel
             </button>
