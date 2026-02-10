@@ -7,7 +7,7 @@ interface TeamListProps {
 export default function TeamList({ teams }: TeamListProps) {
   return (
     <div>
-      <h2>Teams</h2>
+      <h2>Team List</h2>
       <div className="grid">
         {teams.map((t, i) => (
           <div className="card" key={i}>

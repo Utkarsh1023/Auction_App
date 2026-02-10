@@ -6,7 +6,7 @@ export default function Login() {
       <div className="login-card">
         <div className="login-header">
           <h1>Auction Manager</h1>
-          <p>Welcome to the Cricket Auction System</p>
+          <p>Welcome to the Auction System</p>
         </div>
         <SignIn />
       </div>

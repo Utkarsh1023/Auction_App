@@ -9,9 +9,10 @@ interface PlayerListProps {
   players: Player[];
   teams: Team[];
   buyPlayer: (playerIndex: number, teamIndex: number, bid: number) => void;
+  removePlayer: (playerIndex: number) => void;
 }
 
-export default function PlayerList({ players, teams, buyPlayer }: PlayerListProps) {
+export default function PlayerList({ players, teams, buyPlayer, removePlayer }: PlayerListProps) {
   const [bids, setBids] = useState<{ [key: number]: number }>({});
   const [selectedTeams, setSelectedTeams] = useState<{ [key: number]: string }>({});
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -65,17 +66,29 @@ export default function PlayerList({ players, teams, buyPlayer }: PlayerListProp
                 ))}
               </select>
 
-              <button
-                onClick={() => {
-                  if (!bids[p.originalIndex] || selectedTeams[p.originalIndex] === "") {
-                    alert("Enter bid & select team");
-                    return;
-                  }
-                  buyPlayer(p.originalIndex, Number(selectedTeams[p.originalIndex]), bids[p.originalIndex]);
-                }}
-              >
-                Sold
-              </button>
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <button
+                  onClick={() => {
+                    if (!bids[p.originalIndex] || selectedTeams[p.originalIndex] === "") {
+                      alert("Enter bid & select team");
+                      return;
+                    }
+                    buyPlayer(p.originalIndex, Number(selectedTeams[p.originalIndex]), bids[p.originalIndex]);
+                  }}
+                >
+                  Sold
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to remove this player?")) {
+                      removePlayer(p.originalIndex);
+                    }
+                  }}
+                  style={{ backgroundColor: "#dc3545", color: "white" }}
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           )
         )}

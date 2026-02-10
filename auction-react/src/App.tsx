@@ -24,16 +24,16 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load shared data from Firestore on login
+  // Load user-specific data from Firestore on login
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!isSignedIn || !userId) {
       setLoading(false);
       return;
     }
 
     (async () => {
       try {
-        const docRef = doc(db, 'shared', 'auctionData');
+        const docRef = doc(db, 'users', userId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -48,20 +48,30 @@ export default function App() {
         setLoading(false);
       }
     })();
-  }, [isSignedIn]);
+  }, [isSignedIn, userId]);
 
   // Save data to Firestore on changes
   useEffect(() => {
-    if (!isSignedIn || loading) return;
+    if (!isSignedIn || loading || !userId) return;
     const saveData = async () => {
       try {
-        await setDoc(doc(db, 'shared', 'auctionData'), { players, teams, sport, history }, { merge: true });
+        await setDoc(doc(db, 'users', userId), { players, teams, sport, history }, { merge: true });
       } catch (error) {
         console.error("Error saving data:", error);
       }
     };
     saveData();
-  }, [players, teams, sport, history, isSignedIn, loading]);
+  }, [players, teams, sport, history, isSignedIn, loading, userId]);
+
+  /* ================= REMOVE PLAYER ================= */
+  const removePlayer = (playerIndex: number) => {
+    setPlayers(prev => prev.filter((_, i) => i !== playerIndex));
+  };
+
+  /* ================= REMOVE TEAM ================= */
+  const removeTeam = (teamIndex: number) => {
+    setTeams(prev => prev.filter((_, i) => i !== teamIndex));
+  };
 
   /* ================= BUY PLAYER ================= */
   const buyPlayer = (playerIndex: number, teamIndex: number, bid: number) => {
@@ -277,11 +287,11 @@ export default function App() {
       </SignedOut>
       <SignedIn>
         <header>
-          <h1> Player Bidding & Squad Builder</h1>
+          <h1> Players Bidding & Squad Builder</h1>
           <p>Manage live bids, track team purses, and build a powerful squad in real time.</p>
           <p>Every Bid counts - strategy decides the champion.</p>
           <div style={{ marginBottom: "20px" }}>
-            <label>Sport: </label>
+            <label>Sports: </label>
             <select value={sport} onChange={(e) => setSport(e.target.value)}>
               <option value="Cricket">Cricket</option>
               <option value="Football">Football</option>
@@ -301,7 +311,7 @@ export default function App() {
 
         <main>
         <section>
-          <h2>Add Player & Team Captain or Upload File</h2>
+          <h2>Add Player's & Team Captain's or Upload File</h2>
           <div className="grid">
             <AddPlayer setPlayers={setPlayers} players={players} />
             <AddTeam setTeams={setTeams} teams={teams} />
@@ -317,46 +327,45 @@ export default function App() {
             players={players}
             teams={teams}
             buyPlayer={buyPlayer}
+            removePlayer={removePlayer}
           />
         </section>
 
         <section>
-          <TeamList teams={teams} />
+          <TeamList teams={teams} removeTeam={removeTeam} />
         </section>
 
         <section>
           <AuctionHistory history={history} setHistory={setHistory} exportHistoryToExcel={exportHistoryToExcel} />
         </section>
 
-        <>
-          {isAuctionCompleted && (
-            <section>
-              <div className="card" style={{ textAlign: "center" }}>
-                <h2>🏆 Auction Completed!</h2>
-                <p>All players have been sold.</p>
-                <button onClick={saveAuctionData} style={{ marginTop: "20px" }}>
-                  💾 Save Auction Data (Excel)
-                </button>
-              </div>
-            </section>
-          )}
-
+        {isAuctionCompleted && (
           <section>
-            <div className="export-buttons">
-              <button onClick={downloadPDF}>
-                📄 Download Auction Results
-              </button>
-
-              <button onClick={exportPlayersExcel}>
-                📊 Export Players to Excel
-              </button>
-
-              <button onClick={clearAllData} className="clear-btn">
-                🗑️ Clear All Data
+            <div className="card" style={{ textAlign: "center" }}>
+              <h2>🏆 Auction Completed!</h2>
+              <p>All players have been sold.</p>
+              <button onClick={saveAuctionData} style={{ marginTop: "20px" }}>
+                💾 Save Auction Data
               </button>
             </div>
           </section>
-        </>
+        )}
+
+        <section>
+          <div className="export-buttons">
+            <button onClick={downloadPDF}>
+              📄 Download Auction Results
+            </button>
+
+            <button onClick={exportPlayersExcel}>
+              📊 Export Players to Excel
+            </button>
+
+            <button onClick={clearAllData} className="clear-btn">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </section>
       </main>
       </SignedIn>
     </div>
