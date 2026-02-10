@@ -39,7 +39,7 @@ export default function PlayerList({ players, teams, buyPlayer }: PlayerListProp
             <div className="card" key={p.originalIndex}>
               <b>Player Name: {p.name}</b>
               <p>Reg. No.: {p.reg} | Year: {p.year}</p>
-              <p>Base Price ₹{p.basePrice}</p>
+              <p>Base Price: {p.basePrice} Cr</p>
 
               <input
                 type="number"
