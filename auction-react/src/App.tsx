@@ -17,23 +17,23 @@ import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
-  const { userId } = useAuth();
+  const { userId, isSignedIn } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [sport, setSport] = useState<string>("Cricket");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data from Firestore on user login
+  // Load shared data from Firestore on login
   useEffect(() => {
-    if (!userId) {
+    if (!isSignedIn) {
       setLoading(false);
       return;
     }
 
     (async () => {
       try {
-        const docRef = doc(db, 'users', userId);
+        const docRef = doc(db, 'shared', 'auctionData');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -48,20 +48,20 @@ export default function App() {
         setLoading(false);
       }
     })();
-  }, [userId]);
+  }, [isSignedIn]);
 
   // Save data to Firestore on changes
   useEffect(() => {
-    if (!userId || loading) return;
+    if (!isSignedIn || loading) return;
     const saveData = async () => {
       try {
-        await setDoc(doc(db, 'users', userId), { players, teams, sport, history }, { merge: true });
+        await setDoc(doc(db, 'shared', 'auctionData'), { players, teams, sport, history }, { merge: true });
       } catch (error) {
         console.error("Error saving data:", error);
       }
     };
     saveData();
-  }, [players, teams, sport, history, userId, loading]);
+  }, [players, teams, sport, history, isSignedIn, loading]);
 
   /* ================= BUY PLAYER ================= */
   const buyPlayer = (playerIndex: number, teamIndex: number, bid: number) => {
@@ -164,9 +164,9 @@ export default function App() {
     setPlayers([]);
     setTeams([]);
     // Preserve sport, history
-    if (userId) {
+    if (isSignedIn) {
       try {
-        await setDoc(doc(db, 'users', userId), { players: [], teams: [], sport, history }, { merge: true });
+        await setDoc(doc(db, 'shared', 'auctionData'), { players: [], teams: [], sport, history }, { merge: true });
       } catch (error) {
         console.error("Error clearing data:", error);
       }
