@@ -2,6 +2,7 @@ import type { Team } from "../types";
 
 interface TeamListProps {
   teams: Team[];
+  removeTeam: (teamIndex: number) => void;
 }
 
 export default function TeamList({ teams }: TeamListProps) {
