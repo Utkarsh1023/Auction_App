@@ -10,7 +10,6 @@ import AddPlayerExcel from "./components/AddPlayerExcel";
 import AddTeamExcel from "./components/AddTeamExcel";
 import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
-import SquadList from "./components/SquadList";
 
 import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
