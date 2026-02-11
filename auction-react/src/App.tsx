@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
+import { io, Socket } from "socket.io-client";
 import "./App.css";
 
 import AddPlayer from "./components/AddPlayer";
@@ -40,9 +41,31 @@ export default function App() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [auctionCompletedHandled, setAuctionCompletedHandled] = useState(false);
   const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female'>('All');
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const isAuctionCompleted =
     players.length > 0 && players.every(p => p.sold);
+
+  /* ================= SOCKET CONNECTION ================= */
+  useEffect(() => {
+    if (isSignedIn && userId) {
+      const newSocket = io('http://localhost:5000');
+      setSocket(newSocket);
+
+      newSocket.emit('join', userId);
+
+      newSocket.on('dataUpdated', (updatedData) => {
+        setPlayers(updatedData.players || []);
+        setTeams(updatedData.teams || []);
+        setSport(updatedData.sport || "Cricket");
+        setHistory(updatedData.history || []);
+      });
+
+      return () => {
+        newSocket.disconnect();
+      };
+    }
+  }, [isSignedIn, userId]);
 
   /* ================= LOAD USER DATA ================= */
   useEffect(() => {
@@ -82,7 +105,7 @@ export default function App() {
 
     const saveData = async () => {
       try {
-        await fetch('http://localhost:5000/api/auction/data', {
+        await fetch('/api/auction/data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -142,31 +165,32 @@ export default function App() {
       return;
     }
 
-    setPlayers(prev =>
-      prev.map((p, i) =>
-        i === playerIndex ? { ...p, sold: true } : p
-      )
+    const updatedPlayers = players.map((p, i) =>
+      i === playerIndex ? { ...p, sold: true } : p
     );
 
-    setTeams(prev =>
-      prev.map((t, i) =>
-        i === teamIndex
-          ? {
-              ...t,
-              purse: t.purse - bid,
-              squad: [
-                ...t.squad,
-                {
-                  name: player.name,
-                  year: player.year,
-                  gender: player.gender,
-                  bid: bid,
-                },
-              ],
-            }
-          : t
-      )
+    const updatedTeams = teams.map((t, i) =>
+      i === teamIndex
+        ? {
+            ...t,
+            purse: t.purse - bid,
+            squad: [
+              ...t.squad,
+              {
+                name: player.name,
+                year: player.year,
+                gender: player.gender,
+                bid: bid,
+              },
+            ],
+          }
+        : t
     );
+
+    setPlayers(updatedPlayers);
+    setTeams(updatedTeams);
+
+    // Data will be saved via useEffect, which will trigger socket emit from server
   };
 
   /* ================= EXPORT PLAYERS EXCEL ================= */
