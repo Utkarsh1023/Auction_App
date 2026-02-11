@@ -18,9 +18,23 @@ export default function App() {
   const { isSignedIn, user } = useUser();
   const userId = user?.id;
 
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>(() => {
+    const saved = localStorage.getItem("players");
+    return saved ? JSON.parse(saved) as Player[] : [];
+  });
+  const [teams, setTeams] = useState<Team[]>(() => {
+    const saved = localStorage.getItem("teams");
+    return saved ? JSON.parse(saved) as Team[] : [];
+  });
   const [sport, setSport] = useState<string>("Cricket");
+
+  useEffect(() => {
+    localStorage.setItem("players", JSON.stringify(players));
+  }, [players]);
+
+  useEffect(() => {
+    localStorage.setItem("teams", JSON.stringify(teams));
+  }, [teams]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -360,7 +374,7 @@ export default function App() {
           )}
 
           <button onClick={exportPlayersExcel}>
-            📊 Export Players
+            📊 Export Players Status
           </button>
 
           <button onClick={clearAllData}>
