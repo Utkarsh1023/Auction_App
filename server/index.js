@@ -1,8 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const { Server } = require('socket.io');
-const http = require('http');
+const http = require("http");
+const socketIo = require("socket.io");
 require("dotenv").config();
 
 const app = express();
@@ -20,14 +20,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auction', auctionRoutes);
 
 const server = http.createServer(app);
-const io = new Server(server, {
+const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite dev server
+    origin: "http://localhost:3000",
     methods: ["GET", "POST"]
   }
 });
 
-// Socket.io logic
+// Socket.io connection
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
@@ -36,14 +36,14 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} joined room ${userId}`);
   });
 
-
+  socket.on('dataChanged', (data) => {
+    // Emit to all clients in the same userId room except sender
+    socket.to(data.userId).emit('dataUpdated', data);
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
 });
-
-// Make io available to routes
-app.set('io', io);
 
 server.listen(5000, () => console.log("Server running on 5000"));

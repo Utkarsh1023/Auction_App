@@ -4,9 +4,10 @@ interface TeamListProps {
   teams: Team[];
   removeTeam: (teamIndex: number) => void;
   genderFilter: 'All' | 'Male' | 'Female';
+  exportTeamSquadPDF: (team: Team) => void;
 }
 
-export default function TeamList({ teams, removeTeam, genderFilter }: TeamListProps) {
+export default function TeamList({ teams, removeTeam, genderFilter, exportTeamSquadPDF }: TeamListProps) {
   const boysTeams = teams.filter(t => t.gender === 'Male');
   const girlsTeams = teams.filter(t => t.gender === 'Female');
 
@@ -18,16 +19,24 @@ export default function TeamList({ teams, removeTeam, genderFilter }: TeamListPr
           <p><b>Captain Name:</b> {t.captain}</p>
           <p>Remaining Purse: {t.purse} Cr</p>
         </div>
-        <button
-          onClick={() => {
-            if (window.confirm("Are you sure you want to remove this team?")) {
-              removeTeam(i);
-            }
-          }}
-          style={{ backgroundColor: "#dc3545", color: "white", marginTop: "10px" }}
-        >
-          Remove Team
-        </button>
+        <div style={{  gap: '10px', marginTop: '10px'}}>
+          <button
+            onClick={() => exportTeamSquadPDF(t)}
+            style={{ backgroundColor: "#28a745", color: "white" }}
+          >
+           Download Squad
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to remove this team?")) {
+                removeTeam(i);
+              }
+            }}
+            style={{ backgroundColor: "#dc3545", color: "white" }}
+          >
+            Remove Team
+          </button>
+        </div>
       </div>
       <div className="squad-list">
         <h4>Squad:</h4>
@@ -78,3 +87,5 @@ export default function TeamList({ teams, removeTeam, genderFilter }: TeamListPr
     </div>
   );
 }
+
+

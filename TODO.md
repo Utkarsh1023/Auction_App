@@ -1,11 +1,14 @@
-# Real-time Sync Implementation with Socket.io
+# Fix Data Persistence on Refresh
 
 ## Backend Changes
-- [x] Update server/index.js to integrate Socket.io server
-- [x] Update server/routes/auction.js to emit 'dataUpdated' event on save
+- [x] Server is already set up with MongoDB persistence
 
 ## Frontend Changes
-- [x] Update auction-react/src/App.tsx to connect to Socket.io, join user room, listen for updates, emit on buyPlayer
+- [ ] Modify auction-react/src/App.tsx to add localStorage fallback
+  - [ ] Update loadData function to try server first, fallback to localStorage
+  - [ ] Update saveData function to save to both server and localStorage
+  - [ ] Ensure dataLoaded flag works with localStorage
 
 ## Testing
-- [x] Test real-time sync between devices
+- [ ] Test data persistence on refresh with server running
+- [ ] Test data persistence on refresh with server down

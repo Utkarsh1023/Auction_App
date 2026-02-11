@@ -31,9 +31,9 @@ export default function PlayerList({ players, teams, buyPlayer, removePlayer, ge
 
   const renderPlayerCard = (p: FilteredPlayer) => (
     <div className="card" key={p.originalIndex}>
-      <b>Player Name: {p.name}</b>
+      <b style={{fontSize: "18px"}}>Player: {p.name}</b>
       <p>Reg. No.: {p.reg} | Year: {p.year} | Gender: {p.gender}</p>
-      <p>Base Price: {p.basePrice} Cr</p>
+      <p><b>Base Price:</b> {p.basePrice} Cr</p>
 
       {p.sold ? (
         (() => {

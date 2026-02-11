@@ -48,15 +48,6 @@ router.post('/data', verifyUser, async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Emit real-time update to all clients in the user's room
-    const io = req.app.get('io');
-    io.to(req.userId).emit('dataUpdated', {
-      players: updatedData.players,
-      teams: updatedData.teams,
-      sport: updatedData.sport,
-      history: updatedData.history
-    });
-
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving auction data:', error);

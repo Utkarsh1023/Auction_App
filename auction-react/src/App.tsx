@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import { io, Socket } from "socket.io-client";
 import "./App.css";
@@ -13,35 +13,38 @@ import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
 
 import * as XLSX from "xlsx";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
   const { isSignedIn, user } = useUser();
   const userId = user?.id;
 
-  const [players, setPlayers] = useState<Player[]>(() => {
-    const saved = localStorage.getItem("players");
-    return saved ? JSON.parse(saved) as Player[] : [];
-  });
-  const [teams, setTeams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem("teams");
-    return saved ? JSON.parse(saved) as Team[] : [];
-  });
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [sport, setSport] = useState<string>("Cricket");
-
-  useEffect(() => {
-    localStorage.setItem("players", JSON.stringify(players));
-  }, [players]);
-
-  useEffect(() => {
-    localStorage.setItem("teams", JSON.stringify(teams));
-  }, [teams]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [auctionCompletedHandled, setAuctionCompletedHandled] = useState(false);
   const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female'>('All');
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  // Helper functions for localStorage
+  const saveToLocalStorage = (data: { players: Player[], teams: Team[], sport: string, history: HistoryEntry[] }) => {
+    if (userId) {
+      localStorage.setItem(`auctionData_${userId}`, JSON.stringify(data));
+    }
+  };
+
+  const loadFromLocalStorage = (): { players: Player[], teams: Team[], sport: string, history: HistoryEntry[] } | null => {
+    if (userId) {
+      const data = localStorage.getItem(`auctionData_${userId}`);
+      return data ? JSON.parse(data) : null;
+    }
+    return null;
+  };
 
   const isAuctionCompleted =
     players.length > 0 && players.every(p => p.sold);
@@ -49,12 +52,11 @@ export default function App() {
   /* ================= SOCKET CONNECTION ================= */
   useEffect(() => {
     if (isSignedIn && userId) {
-      const newSocket = io('http://localhost:5000');
-      setSocket(newSocket);
+      socketRef.current = io('http://localhost:5000');
 
-      newSocket.emit('join', userId);
+      socketRef.current.emit('join', userId);
 
-      newSocket.on('dataUpdated', (updatedData) => {
+      socketRef.current.on('dataUpdated', (updatedData) => {
         setPlayers(updatedData.players || []);
         setTeams(updatedData.teams || []);
         setSport(updatedData.sport || "Cricket");
@@ -62,7 +64,7 @@ export default function App() {
       });
 
       return () => {
-        newSocket.disconnect();
+        socketRef.current?.disconnect();
       };
     }
   }, [isSignedIn, userId]);
@@ -75,24 +77,48 @@ export default function App() {
     }
 
     const loadData = async () => {
+      let dataLoaded = false;
+
+      // Load from localStorage first
+      const localData = loadFromLocalStorage();
+      if (localData) {
+        setPlayers(localData.players || []);
+        setTeams(localData.teams || []);
+        setSport(localData.sport || "Cricket");
+        setHistory(localData.history || []);
+        dataLoaded = true;
+      } else {
+        // No local data, set defaults
+        setPlayers([]);
+        setTeams([]);
+        setSport("Cricket");
+        setHistory([]);
+        dataLoaded = true;
+      }
+
+      // Try to load from server and update if server has data
       try {
-        const response = await fetch('/api/auction/data', {
+        const response = await fetch('http://localhost:5000/api/auction/data', {
           headers: {
             'user-id': userId
           }
         });
         const data = await response.json();
 
-        setPlayers(data.players || []);
-        setTeams(data.teams || []);
-        setSport(data.sport || "Cricket");
-        setHistory(data.history || []);
-
-        setDataLoaded(true);
+        // If server has data (e.g., players array is not empty), update the state and localStorage
+        if (data.players && data.players.length > 0) {
+          setPlayers(data.players);
+          setTeams(data.teams || []);
+          setSport(data.sport || "Cricket");
+          setHistory(data.history || []);
+          saveToLocalStorage(data);
+        }
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("Error loading data from server:", error);
+        // Ignore, keep local data
       } finally {
         setLoading(false);
+        setDataLoaded(dataLoaded);
       }
     };
 
@@ -104,8 +130,11 @@ export default function App() {
     if (!isSignedIn || !userId || loading || !dataLoaded) return;
 
     const saveData = async () => {
+      // Always save to localStorage first
+      saveToLocalStorage({ players, teams, sport, history });
+
       try {
-        await fetch('/api/auction/data', {
+        await fetch('http://localhost:5000/api/auction/data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -113,8 +142,12 @@ export default function App() {
           },
           body: JSON.stringify({ players, teams, sport, history })
         });
+
+        // Notify all devices for live update
+        socketRef.current?.emit('dataChanged', { userId });
       } catch (error) {
-        console.error("Error saving data:", error);
+        console.error("Error saving data to server:", error);
+        // Data is still saved to localStorage, so it's not lost
       }
     };
 
@@ -242,15 +275,24 @@ export default function App() {
     setTeams([]);
     setAuctionCompletedHandled(false);
 
+    // Clear localStorage
     if (userId) {
-      await fetch('/api/auction/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'user-id': userId
-        },
-        body: JSON.stringify({ players: [], teams: [], sport, history })
-      });
+      localStorage.removeItem(`auctionData_${userId}`);
+    }
+
+    if (userId) {
+      try {
+        await fetch('http://localhost:5000/api/auction/data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'user-id': userId
+          },
+          body: JSON.stringify({ players: [], teams: [], sport, history })
+        });
+      } catch (error) {
+        console.error("Error clearing server data:", error);
+      }
     }
   };
 
@@ -271,6 +313,38 @@ export default function App() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "History");
 
   XLSX.writeFile(workbook, "auction-history.xlsx");
+  };
+
+  /* ================= EXPORT TEAM SQUAD PDF ================= */
+  const exportTeamSquadPDF = (team: Team) => {
+    try {
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(20);
+      doc.text(`${team.name} Squad`, 105, 20, { align: 'center' });
+
+      // Captain info
+      doc.setFontSize(12);
+      doc.text(`Captain: ${team.captain}`, 20, 40);
+      doc.text(`Remaining Purse: ${team.purse} Cr`, 20, 50);
+
+      // Squad list
+      doc.setFontSize(14);
+      doc.text('Squad Players:', 20, 70);
+
+      let yPosition = 80;
+      team.squad.forEach((player, index) => {
+        doc.setFontSize(10);
+        doc.text(`${index + 1}. ${player.name} - Year: ${player.year} - Gender: ${player.gender} - Sold Price: ${player.bid} Cr`, 20, yPosition);
+        yPosition += 10;
+      });
+
+      doc.save(`${team.name}_Squad.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
   };
 
   /* ================= UI ================= */
@@ -381,7 +455,7 @@ export default function App() {
             genderFilter={genderFilter}
           />
 
-          <TeamList teams={teams} removeTeam={removeTeam} genderFilter={genderFilter} />
+          <TeamList teams={teams} removeTeam={removeTeam} genderFilter={genderFilter} exportTeamSquadPDF={exportTeamSquadPDF} />
 
           {/* <SquadList teams={teams} /> */}
 
