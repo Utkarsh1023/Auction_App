@@ -24,20 +24,30 @@ export default function AddPlayerExcel({ setPlayers }: AddPlayerExcelProps) {
       }
 
       const formatted: Player[] = json.map((p: any) => {
-        const basePriceStr = p.basePrice || p['Base Price'] || p.BasePrice || p['base price'] || p['basePrice '] || '0';
-        const basePrice = parseFloat(basePriceStr.toString().replace(/[^\d.]/g, '')) || 0;
+        try {
+          const basePriceStr = p.basePrice || p['Base Price'] || p.BasePrice || p['base price'] || p['basePrice '] || '0';
+          const basePrice = parseFloat(basePriceStr.toString().replace(/[^\d.]/g, '')) || 0;
 
-        // Log original basePriceStr and parsed basePrice for each player
-        console.log(`Player: ${p.name || p.Name || p['Player Name'] || 'Unknown'}, Original basePriceStr: "${basePriceStr}", Parsed basePrice: ${basePrice}`);
+          // Log original basePriceStr and parsed basePrice for each player
+          console.log(`Player: ${p.name || p.Name || p['Player Name'] || 'Unknown'}, Original basePriceStr: "${basePriceStr}", Parsed basePrice: ${basePrice}`);
 
-        return {
-          name: p.name || p.Name || p['Player Name'] || '',
-          reg: p.reg || p.Reg || p['Registration No'] || '',
-          year: p.year || p.Year || '',
-          basePrice: basePrice,
-          sold: false
-        };
-      });
+          const genderStr = p.gender || p.Gender || p['Gender'] || 'Male';
+          const genderLower = genderStr.toString().toLowerCase();
+          const gender = (genderLower === 'female' || genderLower === 'girl' || genderLower === 'f') ? 'Female' : 'Male';
+
+          return {
+            name: p.name || p.Name || p['Player Name'] || '',
+            reg: p.reg || p.Reg || p['Registration No'] || '',
+            year: p.year || p.Year || '',
+            gender: gender,
+            basePrice: basePrice,
+            sold: false
+          };
+        } catch (error) {
+          console.error('Error parsing player row:', p, error);
+          return null; // Skip invalid rows
+        }
+      }).filter((player): player is Player => player !== null);
 
       setPlayers(prev => [...prev, ...formatted]);
     };

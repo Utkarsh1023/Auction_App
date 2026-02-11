@@ -1,7 +1,5 @@
-# TODO: Add Random Player Selection for Auction
+# TODO: Add Toggle for Boys/Girls in PlayerList
 
-- [x] Add state `randomSelected` to track the selected random player index in PlayerList.tsx
-- [x] Implement `selectRandomPlayer` function to randomly select from filtered unsold players
-- [x] Add "Select Random Player" button above the player grid in PlayerList.tsx
-- [x] Add conditional highlighting (e.g., border) to the selected random player card
-- [x] Test the functionality in the browser to ensure random selection works with search filtering
+- [x] Add genderFilter state ('all' | 'boys' | 'girls') to PlayerList.tsx
+- [x] Add toggle buttons (All, Boys, Girls) above the player lists in PlayerList.tsx
+- [x] Conditionally render Boys and Girls sections based on genderFilter in PlayerList.tsx

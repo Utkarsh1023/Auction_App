@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/clerk-react";
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import "./App.css";
+
 import AddPlayer from "./components/AddPlayer";
 import AddTeam from "./components/AddTeam";
 import PlayerList from "./components/PlayerList";
@@ -11,56 +10,97 @@ import AddPlayerExcel from "./components/AddPlayerExcel";
 import AddTeamExcel from "./components/AddTeamExcel";
 import Login from "./components/Login";
 import AuctionHistory from "./components/AuctionHistory";
-import "jspdf-autotable";
+import SquadList from "./components/SquadList";
+
 import * as XLSX from "xlsx";
 import type { Player, Team, HistoryEntry } from "./types";
 
 export default function App() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, user } = useUser();
+  const userId = user?.id;
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [sport, setSport] = useState<string>("Cricket");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [auctionCompletedHandled, setAuctionCompletedHandled] = useState(false);
+  const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female'>('All');
 
-  // Load shared data from Firestore on login
+  const isAuctionCompleted =
+    players.length > 0 && players.every(p => p.sold);
+
+  /* ================= LOAD USER DATA ================= */
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!isSignedIn || !userId) {
       setLoading(false);
       return;
     }
 
-    (async () => {
+    const loadData = async () => {
       try {
-        const docRef = doc(db, 'shared', 'auctionData');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setPlayers((data.players || []).map((p: any) => ({ ...p, basePrice: p.basePrice || 0 })));
-          setTeams(data.teams || []);
-          setSport(data.sport || "Cricket");
-          setHistory(data.history || []);
-        }
+        const response = await fetch('/api/auction/data', {
+          headers: {
+            'user-id': userId
+          }
+        });
+        const data = await response.json();
+
+        setPlayers(data.players || []);
+        setTeams(data.teams || []);
+        setSport(data.sport || "Cricket");
+        setHistory(data.history || []);
+
+        setDataLoaded(true);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
         setLoading(false);
       }
-    })();
-  }, [isSignedIn]);
+    };
 
-  // Save data to Firestore on changes
+    loadData();
+  }, [isSignedIn, userId]);
+
+  /* ================= SAVE USER DATA ================= */
   useEffect(() => {
-    if (!isSignedIn || loading) return;
+    if (!isSignedIn || !userId || loading || !dataLoaded) return;
+
     const saveData = async () => {
       try {
-        await setDoc(doc(db, 'shared', 'auctionData'), { players, teams, sport, history }, { merge: true });
+        await fetch('http://localhost:5000/api/auction/data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'user-id': userId
+          },
+          body: JSON.stringify({ players, teams, sport, history })
+        });
       } catch (error) {
         console.error("Error saving data:", error);
       }
     };
+
     saveData();
-  }, [players, teams, sport, history, isSignedIn, loading]);
+  }, [players, teams, sport, history, isSignedIn, userId, loading, dataLoaded]);
+
+  /* ================= HANDLE AUCTION COMPLETION ================= */
+  useEffect(() => {
+    if (isAuctionCompleted && !auctionCompletedHandled) {
+      const newEntry: HistoryEntry = {
+        sport,
+        date: new Date().toISOString(),
+        playersCount: players.length,
+        teamsCount: teams.length,
+        players: [...players],
+        teams: [...teams],
+        auctionData: JSON.stringify({ players, teams, sport }),
+      };
+      setHistory(prev => [...prev, newEntry]);
+      setAuctionCompletedHandled(true);
+    }
+  }, [isAuctionCompleted, auctionCompletedHandled, sport, players, teams]);
 
   /* ================= REMOVE PLAYER ================= */
   const removePlayer = (playerIndex: number) => {
@@ -89,163 +129,111 @@ export default function App() {
       return;
     }
 
-    // mark player sold
     setPlayers(prev =>
       prev.map((p, i) =>
         i === playerIndex ? { ...p, sold: true } : p
       )
     );
 
-    // update team
     setTeams(prev =>
       prev.map((t, i) =>
         i === teamIndex
           ? {
               ...t,
               purse: t.purse - bid,
-              squad: [...t.squad, {name: player.name, year: player.year, bid: bid}]
+              squad: [
+                ...t.squad,
+                {
+                  name: player.name,
+                  year: player.year,
+                  gender: player.gender,
+                  bid: bid,
+                },
+              ],
             }
           : t
       )
     );
   };
 
-  /* ================= PDF ================= */
-  
-  /* ================= EXCEL ================= */
+  /* ================= EXPORT PLAYERS EXCEL ================= */
   const exportPlayersExcel = () => {
     const data = players.map(p => {
       let soldTo = "";
       if (p.sold) {
-        // Find which team bought this player
         for (const team of teams) {
-          const playerInSquad = team.squad.find(s => s.name === p.name && s.year === p.year);
-          if (playerInSquad) {
+          const found = team.squad.find(
+            s => s.name === p.name && s.year === p.year
+          );
+          if (found) {
             soldTo = team.name;
             break;
           }
         }
       }
+
       return {
         Name: p.name,
         "Registration No": p.reg,
         Year: p.year,
+        Gender: p.gender,
         "Base Price": p.basePrice,
         Status: p.sold ? "Sold" : "Unsold",
-        "Sold To": soldTo
+        "Sold To": soldTo,
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet["!autofilter"] = { ref: "A1:G1" };
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Players");
+
     XLSX.writeFile(workbook, "player-list.xlsx");
   };
 
-  /* ================= CLEAR ================= */
+  /* ================= CLEAR DATA ================= */
   const clearAllData = async () => {
-    if (!window.confirm("⚠️ This will delete auction data (players, teams). History will be preserved. Continue?")) return;
+    if (
+      !window.confirm(
+        "⚠️ This will delete auction data (players & teams). Continue?"
+      )
+    )
+      return;
 
     setPlayers([]);
     setTeams([]);
-    // Preserve sport, history
-    if (isSignedIn) {
-      try {
-        await setDoc(doc(db, 'shared', 'auctionData'), { players: [], teams: [], sport, history }, { merge: true });
-      } catch (error) {
-        console.error("Error clearing data:", error);
-      }
+    setAuctionCompletedHandled(false);
+
+    if (userId) {
+      await fetch('/api/auction/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'user-id': userId
+        },
+        body: JSON.stringify({ players: [], teams: [], sport, history })
+      });
     }
   };
 
-  /* ================= AUCTION COMPLETION ================= */
-  const isAuctionCompleted = players.every(p => p.sold);
-
+  /* ================= EXPORT HISTORY TO EXCEL ================= */
   const exportHistoryToExcel = () => {
-    if (history.length === 0) {
-      alert("No history to export.");
-      return;
-    }
+    const data = history.map(h => ({
+      Sport: h.sport,
+      Date: new Date(h.date).toLocaleDateString(),
+      'Players Count': h.playersCount,
+      'Teams Count': h.teamsCount,
+      'Auction Data': h.auctionData,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet["!autofilter"] = { ref: "A1:E1" };
 
     const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "History");
 
-    // Summary sheet
-    const summaryData = history.map((entry, index) => ({
-      "Index": index + 1,
-      "Sport": entry.sport,
-      "Date": new Date(entry.date).toLocaleDateString(),
-      "Players Count": entry.playersCount,
-      "Teams Count": entry.teamsCount
-    }));
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, "History Summary");
-
-    // Detailed sheets for each auction
-    history.forEach((entry, index) => {
-      const auctionData = JSON.parse(entry.auctionData);
-      const playersData = auctionData.players.map((p: Player) => ({
-        Name: p.name,
-        "Registration No": p.reg,
-        Year: p.year,
-        "Base Price": p.basePrice,
-        Status: p.sold ? "Sold" : "Unsold"
-      }));
-      const teamsData = auctionData.teams.map((t: Team) => ({
-        Name: t.name,
-        Captain: t.captain,
-        "Remaining Purse": t.purse,
-        "Squad Size": t.squad.length
-      }));
-
-      const playersSheet = XLSX.utils.json_to_sheet(playersData);
-      const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
-
-      XLSX.utils.book_append_sheet(workbook, playersSheet, `Auction ${index + 1} - Players`);
-      XLSX.utils.book_append_sheet(workbook, teamsSheet, `Auction ${index + 1} - Teams`);
-    });
-
-    XLSX.writeFile(workbook, "auction-history.xlsx");
-  };
-
-  const saveAuctionData = () => {
-    // Prepare data for Excel
-    const playersData = players.map(p => ({
-      Name: p.name,
-      "Registration No": p.reg,
-      Year: p.year,
-      "Base Price": p.basePrice,
-      Status: p.sold ? "Sold" : "Unsold"
-    }));
-
-    const teamsData = teams.map(t => ({
-      Name: t.name,
-      Captain: t.captain,
-      "Remaining Purse": t.purse,
-      "Squad Size": t.squad.length
-    }));
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    const playersSheet = XLSX.utils.json_to_sheet(playersData);
-    const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
-
-    XLSX.utils.book_append_sheet(workbook, playersSheet, "Players");
-    XLSX.utils.book_append_sheet(workbook, teamsSheet, "Teams");
-
-    // Download Excel file
-    XLSX.writeFile(workbook, "auction-data.xlsx");
-
-    // Save to history
-    const historyEntry = {
-      sport,
-      date: new Date().toISOString(),
-      playersCount: players.length,
-      teamsCount: teams.length,
-      players: [...players],
-      teams: [...teams],
-      auctionData: JSON.stringify({ players, teams }) // Keep JSON for history storage
-    };
-    setHistory(prev => [...prev, historyEntry]);
+  XLSX.writeFile(workbook, "auction-history.xlsx");
   };
 
   /* ================= UI ================= */
@@ -258,84 +246,128 @@ export default function App() {
       <SignedOut>
         <Login />
       </SignedOut>
+
       <SignedIn>
         <header>
-          <h1> Players Bidding & Squad Builder</h1>
-          <p>Manage live bids, track team purses, and build a powerful squad in real time.</p>
-          <p>Every Bid counts - strategy decides the champion.</p>
-          <div style={{ marginBottom: "20px" }}>
-            <label>Sports: </label>
-            <select value={sport} onChange={(e) => setSport(e.target.value)}>
-              <option value="Cricket">Cricket</option>
-              <option value="Football">Football</option>
-              <option value="Basketball">Basketball</option>
-              <option value="Volleyball">Volleyball</option>
-              <option value="Badminton">Badminton</option>
-              <option value="Table Tennis">Table Tennis</option>
-              <option value="E-Sports">E-Sports</option>
-              <option value="Kabbadi">Kabbadi</option>
-              <option value="Chess">Chess</option>
-            </select>
-          </div>
-          <div style={{ marginBottom: "20px", textAlign: "center" }}>
-            <UserButton />
-          </div>
+          <h1>Players Bidding & Squad Builder</h1>
+          <p>Manage live bids and build powerful squads.</p>
+
+          <select
+            value={sport}
+            onChange={e => setSport(e.target.value)}
+          >
+            <option value="Cricket">Cricket</option>
+            <option value="Football">Football</option>
+            <option value="Basketball">Basketball</option>
+            <option value="Volleyball">Volleyball</option>
+            <option value="Badminton">Badminton</option>
+            <option value="Table Tennis">Table Tennis</option>
+            <option value="E-Sports">E-Sports</option>
+            <option value="Kabaddi">Kabaddi</option>
+            <option value="Chess">Chess</option>
+          </select>
+
+          <UserButton />
         </header>
 
         <main>
-        <section>
-          <h2>Add Player's & Team Captain's or Upload File</h2>
-          <div className="grid">
-            <AddPlayer setPlayers={setPlayers} players={players} />
-            <AddTeam setTeams={setTeams} teams={teams} />
-            <div className="card">
-              <AddPlayerExcel setPlayers={setPlayers} />
-              <AddTeamExcel setTeams={setTeams} />
-            </div>
-          </div>
-        </section>
+                      <section className="add-section">
+              <div className="card-grid">
+                <div className="card">
+                  <AddPlayer setPlayers={setPlayers} players={players} />
+                </div>
 
-        <section>
+                <div className="card">
+                  <AddTeam setTeams={setTeams} teams={teams} />
+                </div>
+
+                <div className="card">
+                  <AddPlayerExcel setPlayers={setPlayers} />
+                </div>
+
+                <div className="card">
+                  <AddTeamExcel setTeams={setTeams} />
+                </div>
+              </div>
+            </section>
+
+
+          <div style={{ marginBottom: "20px", display: "flex" }}>
+            <button
+              onClick={() => setGenderFilter('All')}
+              style={{
+                marginRight: "10px",
+                backgroundColor: genderFilter === 'All' ? '#007bff' : '#f8f9fa',
+                color: genderFilter === 'All' ? 'white' : 'black',
+                border: '1px solid #ccc',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setGenderFilter('Male')}
+              style={{
+                marginRight: "10px",
+                backgroundColor: genderFilter === 'Male' ? '#007bff' : '#f8f9fa',
+                color: genderFilter === 'Male' ? 'white' : 'black',
+                border: '1px solid #ccc',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Male
+            </button>
+            <button
+              onClick={() => setGenderFilter('Female')}
+              style={{
+                backgroundColor: genderFilter === 'Female' ? '#007bff' : '#f8f9fa',
+                color: genderFilter === 'Female' ? 'white' : 'black',
+                border: '1px solid #ccc',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Female
+            </button>
+          </div>
+
           <PlayerList
             players={players}
             teams={teams}
             buyPlayer={buyPlayer}
             removePlayer={removePlayer}
+            genderFilter={genderFilter}
           />
-        </section>
 
-        <section>
-          <TeamList teams={teams} removeTeam={removeTeam} />
-        </section>
+          <TeamList teams={teams} removeTeam={removeTeam} genderFilter={genderFilter} />
 
-        <section>
-          <AuctionHistory history={history} setHistory={setHistory} exportHistoryToExcel={exportHistoryToExcel} />
-        </section>
+          {/* <SquadList teams={teams} /> */}
 
-        {isAuctionCompleted && (
-          <section>
-            <div className="card" style={{ textAlign: "center" }}>
+          <AuctionHistory
+            history={history}
+            setHistory={setHistory}
+            exportHistoryToExcel={exportHistoryToExcel}
+          />
+
+          {isAuctionCompleted && (
+            <div className="card">
               <h2>🏆 Auction Completed!</h2>
-              <p>All players have been sold.</p>
-              <button onClick={saveAuctionData} style={{ marginTop: "20px" }}>
-                💾 Save Auction Data
-              </button>
             </div>
-          </section>
-        )}
+          )}
 
-        <section>
-          <div className="export-buttons">
-            <button onClick={exportPlayersExcel}>
-              📊 Export Players to Excel
-            </button>
+          <button onClick={exportPlayersExcel}>
+            📊 Export Players
+          </button>
 
-            <button onClick={clearAllData} className="clear-btn">
-              🗑️ Clear All Data
-            </button>
-          </div>
-        </section>
-      </main>
+          <button onClick={clearAllData}>
+            🗑️ Clear Data
+          </button>
+        </main>
       </SignedIn>
     </div>
   );

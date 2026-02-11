@@ -58,10 +58,41 @@ header {
   border-bottom: 3px solid #667eea;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
+.add-section {
+  margin: 40px 0;
+}
+
+/* GRID LAYOUT */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* CARD STYLE */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 main {
   flex: 1;
   padding: 40px 20px;
+  
 }
 
 footer {

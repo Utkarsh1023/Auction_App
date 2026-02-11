@@ -14,6 +14,7 @@ export default function AddPlayer({ setPlayers, players }: AddPlayerProps) {
       name: (f.elements.namedItem('name') as HTMLInputElement).value.trim(),
       reg: (f.elements.namedItem('reg') as HTMLInputElement).value.trim(),
       year: (f.elements.namedItem('year') as HTMLInputElement).value.trim(),
+      gender: (f.elements.namedItem('gender') as HTMLSelectElement).value as 'Male' | 'Female',
       basePrice: Number((f.elements.namedItem('base') as HTMLInputElement).value),
       sold: false
     };
@@ -34,6 +35,11 @@ export default function AddPlayer({ setPlayers, players }: AddPlayerProps) {
       <input name="name" placeholder="Player Name" required />
       <input name="reg" placeholder="Reg No" required />
       <input name="year" placeholder="Year" required />
+      <select name="gender" required>
+        <option value="">Select Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
       <input name="base" type="number" placeholder="Base Price" required />
       <button>Add Player</button>
     </form>
